@@ -20,10 +20,15 @@ var env = [
     ['wrl','wnl','wbl','wk','wq','wbr','wnr','wrr'],
 ];
 
+var maxMinRole = {
+    "max":"b",
+    "min":"w"
+};
+
 var color = {
     "b":"black",
     "w":"white"
-}
+};
 
 var pieceDict = {
     "r":"rook",
@@ -34,6 +39,18 @@ var pieceDict = {
     "p":"pawn"
 };
 
+var pieceWts = {
+    "r":90,
+    "n":60,
+    "b":40,
+    "k":2000,
+    "q":400,
+    "p":10
+}
+
+var botChar = 'b';
+var userChar = 'w';
+
 var chance = 'w'; // Checks which players gets to move
 
 var main = document.getElementById("main");
@@ -41,6 +58,8 @@ var turn = document.getElementById("turn");
 
 var moves = [] // store valid moves
 var selectedPiece = ''; // store selected piece
+
+var maxDepth = 3; // works good for depth = 3 
 
 /******************************************************************/
 // Create the front-end and environment
@@ -52,8 +71,9 @@ function renderPositions(){
     renders the front-end of the board
     function is called everytime a move is made
     */
-    if(chance=='w') turn.innerHTML = "<p>White's Turn</p>";
-    else turn.innerHTML = "<p>Black's Turn</p>";
+
+    if(chance=='w') turn.innerHTML = "<p>Your Turn</p>";
+    else turn.innerHTML = "<p>Bot's Turn</p>";
 
     main.innerHTML = "";
     var alt = 0, id=0;
@@ -87,6 +107,11 @@ function renderPositions(){
 
 /******************************************************************/
 // helper functions
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+ }
+
 function isMoveInMoves(move){
      /* 
         checks if the selected square is a move
@@ -99,11 +124,30 @@ function isMoveInMoves(move){
     return false;
 }
 
+function alterChance(){
+    if(chance=='w') chance = 'b';
+    else chance = 'w';
+    moves = [];
+    if(chance=='w') turn.innerHTML = "<p>Your Turn</p>";
+    else turn.innerHTML = `<p>Bot's Turn</p><div class="loader"></div>`;
+}
+
+function clone([...env]){
+    var clone = [];
+    for(let i=0;i<8;i++){
+        let row = [];
+        for(let j=0;j<8;j++){
+            row.push(env[i][j]);
+        }
+        clone.push(row);
+    }
+    return clone;
+}
 
 /******************************************************************/
 // get moves for pieces
 
-function clickAction(i,j){
+async function clickAction(i,j){
 
      /* 
         checks if the square clicked on by the user is a move 
@@ -113,15 +157,13 @@ function clickAction(i,j){
     renderPositions();
     if(isMoveInMoves([i,j])){
         movePiece(selectedPiece, i,j);
-        if(chance=='w') chance = 'b';
-        else chance = 'w';
-        moves = [];
-        if(chance=='w') turn.innerHTML = "<p>White's Turn</p>";
-        else turn.innerHTML = "<p>Black's Turn</p>";
+        alterChance();
+        await sleep(1000);
+        botMove();
     }
     else{
         selectedPiece = env[i][j];
-
+        moves = [];
         if(selectedPiece[0]!=chance) return;
 
         if(env[i][j][1]=='p'){
@@ -148,7 +190,6 @@ function clickAction(i,j){
             moves = getKingMoves(i,j);
             displayMoves(moves);
         }
-        else moves = [];
     }
     
 }
@@ -195,7 +236,7 @@ function getPawnMoves(i,j){
     } else{
         return moves;
     }
-    if(((sign==1 && i==1) || (sign==-1 && i==6)) && currentPiece[0]!=env[i + sign*2][j][0]) moves.push([i + sign*2,j]);
+    if(((sign==1 && i==1) || (sign==-1 && i==6)) && env[i + sign*2][j]=='') moves.push([i + sign*2,j]);
     return moves;
 }
 
@@ -498,3 +539,189 @@ function getKingMoves(i,j){
     return moves;
 }
 /******************************************************************/
+
+/******************************************************************/
+// MIN MAX ALGORITHM
+
+function botMove(){
+    let envClone = clone(env);
+    var piece, maxScore = -1000000, bestMove=[];
+    for(let i=0;i<8;i++){
+        for(let j=0;j<8;j++){
+            // get all possible moves for that particular piece
+            let botMoves = [];
+            if(envClone[i][j]!='' && envClone[i][j][0]==botChar){
+                if(env[i][j][1]=='p'){
+                    botMoves = getPawnMoves(i,j);
+                }
+                else if(env[i][j][1]=='b'){
+                    botMoves = getBishopMoves(i,j);
+                }
+                else if(env[i][j][1]=='n'){
+                    botMoves = getKnightMoves(i,j);
+                }
+                else if(env[i][j][1]=='r'){
+                    botMoves = getRookMoves(i,j);
+                }
+                else if(env[i][j][1]=='q'){
+                    botMoves = getQueenMoves(i,j);
+                }
+                else if(env[i][j][1]=='k'){
+                    botMoves = getKingMoves(i,j);
+                }
+            }
+
+            // get score for each move
+            botMoves.forEach(m=>{
+                if(env[m[0]][m[1]][0]==userChar && env[m[0]][m[1]][1]=='k'){
+                    piece = env[i][j];
+                    maxScore = 1000000;
+                    bestMove = m;
+                }
+                else{
+                    let newKillScore = 0;
+                    if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newKillScore += pieceWts[env[m[0]][m[1]][1]];
+                    envModified = makeMoveInEnv([...envClone], envClone[i][j], m[0], m[1]);
+                    let score = getMoveScore(envModified, false, 1, newKillScore);
+                    //console.log(score);
+                    if(score>maxScore){
+                        piece = env[i][j];
+                        maxScore = score;
+                        bestMove = m;
+                        //console.log(env[i][j]);
+                        //console.log(maxScore);
+                    }
+                }
+            });
+
+        }
+    }
+    //console.log(bestMove);
+    //console.log(maxScore);
+    env = makeMoveInEnv(env, piece, bestMove[0], bestMove[1]);
+    renderPositions();
+    alterChance();
+}
+
+function makeMoveInEnv(envClone, piece, i, j){
+    envCopy = clone(envClone);
+    for(let i=0;i<8;i++){
+        for(let j=0;j<8;j++){
+            if(envCopy[i][j]==piece) envCopy[i][j]="";
+        }
+    }
+    envCopy[i][j] = piece;
+    return envCopy;
+}
+
+function evaluateBoard([...envClone], killScore){
+    let score = 0;
+    for(let i=0;i<8;i++){
+        for(let j=0;j<8;j++){
+            if(envClone[i][j][0]==botChar){
+                score += pieceWts[envClone[i][j][1]];
+            }
+        }
+    }
+    return score+killScore;
+}
+
+// uses minmax recursive algorithm to find the best option
+function getMoveScore([...envClone], isMax, depth, killScore){
+    let env = clone(envClone);
+    if(depth==maxDepth){
+        // if the king is killed or depth is reached, evaluate the board and return score.
+        let evaluationScore = evaluateBoard(env, killScore);
+        return evaluationScore;
+    }
+
+    if(isMax){
+        let maxScore = -1000000;
+        // check score for all possible next moves and store maximum
+        for(let i=0;i<8;i++){
+            for(let j=0;j<8;j++){
+            // get all possible moves for that particular piece
+            let botMoves = [];
+            if(env[i][j]!='' && env[i][j][0]==botChar){
+                if(env[i][j][1]=='p'){
+                    botMoves = getPawnMoves(i,j);
+                }
+                else if(env[i][j][1]=='b'){
+                    botMoves = getBishopMoves(i,j);
+                }
+                else if(env[i][j][1]=='n'){
+                    botMoves = getKnightMoves(i,j);
+                }
+                else if(env[i][j][1]=='r'){
+                    botMoves = getRookMoves(i,j);
+                }
+                else if(env[i][j][1]=='q'){
+                    botMoves = getQueenMoves(i,j);
+                }
+                else if(env[i][j][1]=='k'){
+                    botMoves = getKingMoves(i,j);
+                }
+                displayMoves(moves);
+            }
+            // get score for each move
+            botMoves.forEach(m=>{
+                let newKillScore = killScore;
+                if(env[m[0]][m[1]][0]==userChar && env[m[0]][m[1]][1]=='k') return 100000;
+                if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newKillScore += pieceWts[env[m[0]][m[1]][1]];
+                let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1], newKillScore);
+                let score = getMoveScore(envModified, false, depth+1, newKillScore);
+                //console.log(score);
+                if(score>maxScore){
+                    maxScore = score;
+                }
+            });
+            }
+        }
+        return maxScore;
+
+    }
+    else{
+        let minScore = 1000000;
+        // check score for all possible next moves and store maximum
+        for(let i=0;i<8;i++){
+            for(let j=0;j<8;j++){
+            // get all possible moves for that particular piece
+            let botMoves = [];
+            if(env[i][j]!='' && env[i][j][0]==userChar){
+                if(env[i][j][1]=='p'){
+                    botMoves = getPawnMoves(i,j);
+                }
+                else if(env[i][j][1]=='b'){
+                    botMoves = getBishopMoves(i,j);
+                }
+                else if(env[i][j][1]=='n'){
+                    botMoves = getKnightMoves(i,j);
+                }
+                else if(env[i][j][1]=='r'){
+                    botMoves = getRookMoves(i,j);
+                }
+                else if(env[i][j][1]=='q'){
+                    botMoves = getQueenMoves(i,j);
+                }
+                else if(env[i][j][1]=='k'){
+                    botMoves = getKingMoves(i,j);
+                }
+                displayMoves(moves);
+            }
+            // get score for each move
+            botMoves.forEach(m=>{
+                let newKillScore = killScore;
+                if(env[m[0]][m[1]][0]==botChar && env[m[0]][m[1]][1]=='k') return -100000;
+                let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1]);
+                let score = getMoveScore(envModified, true, depth+1, newKillScore);
+                //console.log(score);
+                if(score<minScore){
+                    minScore = score;
+                }
+            });
+            }
+        }
+        //console.log(minScore);
+        return minScore;
+    }
+}
