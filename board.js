@@ -1,6 +1,14 @@
 /******************************************************************/
 
 // main environment variable
+
+/* 
+-> The first letter in each cell represents the color
+-> The second letter represents the piece type (bishop, rook...)
+-> The third letter uniquely identifies each piece from other similar 
+   pieces. 
+*/
+
 var env = [
     ['brl','bnl','bbl','bk','bq','bbr','bnr','brr'],
     ['bp1','bp2','bp3','bp4','bp5','bp6','bp7','bp8'],
@@ -26,16 +34,27 @@ var pieceDict = {
     "p":"pawn"
 };
 
+var chance = 'w'; // Checks which players gets to move
+
 var main = document.getElementById("main");
+var turn = document.getElementById("turn");
 
 var moves = [] // store valid moves
-var selectedPiece = '';
+var selectedPiece = ''; // store selected piece
+
 /******************************************************************/
 // Create the front-end and environment
 
 renderPositions();
 
 function renderPositions(){
+    /* 
+    renders the front-end of the board
+    function is called everytime a move is made
+    */
+    if(chance=='w') turn.innerHTML = "<p>White's Turn</p>";
+    else turn.innerHTML = "<p>Black's Turn</p>";
+
     main.innerHTML = "";
     var alt = 0, id=0;
     for(var i=0;i<8;i++){
@@ -67,8 +86,11 @@ function renderPositions(){
 }
 
 /******************************************************************/
-// helper function 
+// helper functions
 function isMoveInMoves(move){
+     /* 
+        checks if the selected square is a move
+    */
     for(var i=0;i<moves.length;i++){
         if(moves[i][0]==move[0] && moves[i][1]==move[1]){
             return true;
@@ -82,13 +104,26 @@ function isMoveInMoves(move){
 // get moves for pieces
 
 function clickAction(i,j){
+
+     /* 
+        checks if the square clicked on by the user is a move 
+        or to select a piece
+    */
+
     renderPositions();
     if(isMoveInMoves([i,j])){
         movePiece(selectedPiece, i,j);
+        if(chance=='w') chance = 'b';
+        else chance = 'w';
         moves = [];
+        if(chance=='w') turn.innerHTML = "<p>White's Turn</p>";
+        else turn.innerHTML = "<p>Black's Turn</p>";
     }
     else{
         selectedPiece = env[i][j];
+
+        if(selectedPiece[0]!=chance) return;
+
         if(env[i][j][1]=='p'){
             moves = getPawnMoves(i,j);
             displayMoves(moves);
@@ -141,9 +176,26 @@ function displayMoves(moves){
 function getPawnMoves(i,j){
     var sign = 1;
     let moves = [];
+    let currentPiece = env[i][j];
     if(env[i][j][0]=='w') sign = -1;
-    moves.push([i + sign*1,j]);
-    if((sign==1 && i==1) || (sign==-1 && i==6)) moves.push([i + sign*2,j]);
+
+    if(i+sign<0 || i+sign>=8) return [];
+
+    // up-left if opponent piece is there
+    if(j-1>=0 && env[i+sign][j-1]!='' && env[i+sign][j-1][0]!=currentPiece[0]){
+        moves.push([i+sign,j-1]);
+    } 
+    // up-right if opponent piece is there
+    if(j+1<8 && env[i+sign][j+1]!='' && env[i+sign][j+1][0]!=currentPiece[0]){
+        moves.push([i+sign,j+1]);
+    } 
+
+    if(env[i+sign*1][j]==''){
+        moves.push([i + sign*1,j]);
+    } else{
+        return moves;
+    }
+    if(((sign==1 && i==1) || (sign==-1 && i==6)) && currentPiece[0]!=env[i + sign*2][j][0]) moves.push([i + sign*2,j]);
     return moves;
 }
 
@@ -445,3 +497,4 @@ function getKingMoves(i,j){
     }
     return moves;
 }
+/******************************************************************/

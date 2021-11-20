@@ -1,3 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap");
+
+#turn p {
+  text-align: center;
+  font-family: "Roboto", sans-serif;
+  font-size: 30px;
+}
+
 #main {
   position: absolute;
   top: 50%;
