@@ -58,16 +58,16 @@ function renderPositions(){
     main.innerHTML = "";
     var alt = 0, id=0;
     for(var i=0;i<8;i++){
+        main.innerHTML+=`<div class="row" id="row${i}"></div>`;
         for(var j=0;j<8;j++){
             var className = "square ";
             if(alt%2==0) className+="white";
             else className+="brown";
             if(j!=7) alt+=1;
     
-            main.innerHTML += `<div class="${className}" id="square_${id}" onclick="clickAction(${i},${j})"></div>`;
+            document.getElementById(`row${i}`).innerHTML += `<div class="${className}" id="square_${id}" onclick="clickAction(${i},${j})"></div>`;
             id+=1;
         }
-        main.innerHTML+= "<br>";
     }
 
     id = 0;
@@ -78,7 +78,7 @@ function renderPositions(){
                 square.innerHTML = "";
             }
             else{
-                square.innerHTML += `<img width="40" height="40" src='./pieces/${color[env[i][j][0]]}_${pieceDict[env[i][j][1]]}.png'>`;
+                square.innerHTML += `<img class="pieces" src='./pieces/${color[env[i][j][0]]}_${pieceDict[env[i][j][1]]}.png'>`;
             }
             id+=1;
         }

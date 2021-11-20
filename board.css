@@ -13,15 +13,27 @@
   transform: translate(-50%, -50%);
 }
 
+.row {
+  display: flex;
+  flex-direction: row;
+}
+
 .square {
+  position: relative;
   display: inline-block;
   border-color: black;
-  border-width: 1px;
+  border-width: 2px;
+  padding: 10px;
   border-style: solid;
-  width: 50px;
+  width: 30px;
+  height: 30px;
   text-align: center;
-  height: 50px;
   margin: 0;
+}
+
+.pieces {
+  width: 30px;
+  height: 30px;
 }
 
 .square:hover {
@@ -30,7 +42,7 @@
 }
 
 .brown {
-  background-color: rgb(206, 73, 73);
+  background-color: rgb(201, 21, 21);
 }
 
 .white {
@@ -38,10 +50,14 @@
 }
 
 .move_circle {
-  align-self: center;
-  width: 20px;
-  height: 20px;
-  background-color: red;
-  opacity: 0.7;
-  border-radius: 10px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 50px;
+  height: 50px;
+  text-align: center;
+  background-color: rgb(253, 255, 133);
+  opacity: 0.5;
 }
