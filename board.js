@@ -61,9 +61,9 @@ var turn = document.getElementById("turn");
 var moves = [] // store valid moves
 var selectedPiece = ''; // store selected piece
 
-var maxDepth = 3; // works good for depth = 3 
+var maxDepth = 4; 
 
-var defenseWeight = 1;
+var defenseWeight = 1; // defense should be given more priority or it will sacrifice to kill
 var attackWeight = 1;
 
 /******************************************************************/
@@ -172,27 +172,27 @@ async function clickAction(i,j){
         if(selectedPiece[0]!=chance) return;
 
         if(env[i][j][1]=='p'){
-            moves = getPawnMoves(i,j);
+            moves = getPawnMoves(i,j,env);
             displayMoves(moves);
         }
         else if(env[i][j][1]=='b'){
-            moves = getBishopMoves(i,j);
+            moves = getBishopMoves(i,j,env);
             displayMoves(moves);
         }
         else if(env[i][j][1]=='n'){
-            moves = getKnightMoves(i,j);
+            moves = getKnightMoves(i,j,env);
             displayMoves(moves);
         }
         else if(env[i][j][1]=='r'){
-            moves = getRookMoves(i,j);
+            moves = getRookMoves(i,j,env);
             displayMoves(moves);
         }
         else if(env[i][j][1]=='q'){
-            moves = getQueenMoves(i,j);
+            moves = getQueenMoves(i,j,env);
             displayMoves(moves);
         }
         else if(env[i][j][1]=='k'){
-            moves = getKingMoves(i,j);
+            moves = getKingMoves(i,j,env);
             displayMoves(moves);
         }
     }
@@ -219,7 +219,7 @@ function displayMoves(moves){
     });
 }
 
-function getPawnMoves(i,j){
+function getPawnMoves(i,j, env){
     var sign = 1;
     let moves = [];
     let currentPiece = env[i][j];
@@ -245,7 +245,7 @@ function getPawnMoves(i,j){
     return moves;
 }
 
-function getBishopMoves(i,j){
+function getBishopMoves(i,j, env){
     var moves = [];
     var currentPiece = env[i][j];
     // up-right
@@ -305,7 +305,7 @@ function getBishopMoves(i,j){
     return moves;
 }
 
-function getKnightMoves(i,j){
+function getKnightMoves(i,j, env){
     var moves = [];
     var currentPiece = env[i][j];
     //top-right
@@ -345,7 +345,7 @@ function getKnightMoves(i,j){
     return moves;
 }
 
-function getRookMoves(i,j){
+function getRookMoves(i,j, env){
     var i_idx=i, j_idx=j;
     var moves = [];
     let currentPiece = env[i][j];
@@ -402,7 +402,7 @@ function getRookMoves(i,j){
     return moves;
 }
 
-function getQueenMoves(i,j){
+function getQueenMoves(i,j, env){
     var i_idx=i, j_idx=j;
     var moves = [];
     let currentPiece = env[i][j];
@@ -506,7 +506,7 @@ function getQueenMoves(i,j){
     return moves;
 }
 
-function getKingMoves(i,j){
+function getKingMoves(i,j, env){
     var moves = [];
     let currentPiece = env[i][j];
     //down
@@ -558,22 +558,22 @@ function botMove(){
             let botMoves = [];
             if(envClone[i][j]!='' && envClone[i][j][0]==botChar){
                 if(env[i][j][1]=='p'){
-                    botMoves = getPawnMoves(i,j);
+                    botMoves = getPawnMoves(i,j,envClone);
                 }
                 else if(env[i][j][1]=='b'){
-                    botMoves = getBishopMoves(i,j);
+                    botMoves = getBishopMoves(i,j,envClone);
                 }
                 else if(env[i][j][1]=='n'){
-                    botMoves = getKnightMoves(i,j);
+                    botMoves = getKnightMoves(i,j,envClone);
                 }
                 else if(env[i][j][1]=='r'){
-                    botMoves = getRookMoves(i,j);
+                    botMoves = getRookMoves(i,j,envClone);
                 }
                 else if(env[i][j][1]=='q'){
-                    botMoves = getQueenMoves(i,j);
+                    botMoves = getQueenMoves(i,j,envClone);
                 }
                 else if(env[i][j][1]=='k'){
-                    botMoves = getKingMoves(i,j);
+                    botMoves = getKingMoves(i,j,envClone);
                 }
             }
 
@@ -587,7 +587,7 @@ function botMove(){
                 else{
                     let newKillScore = 0;
                     if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newKillScore += pieceWts[env[m[0]][m[1]][1]];
-                    envModified = makeMoveInEnv([...envClone], envClone[i][j], m[0], m[1]);
+                    let envModified = makeMoveInEnv([...envClone], envClone[i][j], m[0], m[1]);
                     let score = getMoveScore(envModified, false, 1, newKillScore);
                     //console.log(score);
                     if(score>maxScore){
@@ -612,8 +612,8 @@ function botMove(){
     alterChance();
 }
 
-function makeMoveInEnv(envClone, piece, i, j){
-    envCopy = clone(envClone);
+function makeMoveInEnv([...envClone], piece, i, j){
+    let envCopy = clone(envClone);
     for(let i=0;i<8;i++){
         for(let j=0;j<8;j++){
             if(envCopy[i][j]==piece) envCopy[i][j]="";
@@ -650,7 +650,7 @@ function getMoveScore([...envClone], isMax, depth, killScore){
     let env = clone(envClone);
     if(depth==maxDepth){
         // if the king is killed or depth is reached, evaluate the board and return score.
-        let evaluationScore = evaluateBoard(envClone, killScore);
+        let evaluationScore = evaluateBoard(env, killScore);
         return evaluationScore;
     }
 
@@ -663,29 +663,27 @@ function getMoveScore([...envClone], isMax, depth, killScore){
             let botMoves = [];
             if(env[i][j]!='' && env[i][j][0]==botChar){
                 if(env[i][j][1]=='p'){
-                    botMoves = getPawnMoves(i,j);
+                    botMoves = getPawnMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='b'){
-                    botMoves = getBishopMoves(i,j);
+                    botMoves = getBishopMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='n'){
-                    botMoves = getKnightMoves(i,j);
+                    botMoves = getKnightMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='r'){
-                    botMoves = getRookMoves(i,j);
+                    botMoves = getRookMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='q'){
-                    botMoves = getQueenMoves(i,j);
+                    botMoves = getQueenMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='k'){
-                    botMoves = getKingMoves(i,j);
+                    botMoves = getKingMoves(i,j,env);
                 }
-                displayMoves(moves);
             }
             // get score for each move
             botMoves.forEach(m=>{
                 let newKillScore = killScore;
-                if(env[m[0]][m[1]][0]==userChar && env[m[0]][m[1]][1]=='k') return 100000;
                 if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newKillScore += attackWeight * pieceWts[env[m[0]][m[1]][1]];
                 let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1], newKillScore);
                 let score = getMoveScore(envModified, false, depth+1, newKillScore);
@@ -708,32 +706,31 @@ function getMoveScore([...envClone], isMax, depth, killScore){
             let botMoves = [];
             if(env[i][j]!='' && env[i][j][0]==userChar){
                 if(env[i][j][1]=='p'){
-                    botMoves = getPawnMoves(i,j);
+                    botMoves = getPawnMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='b'){
-                    botMoves = getBishopMoves(i,j);
+                    botMoves = getBishopMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='n'){
-                    botMoves = getKnightMoves(i,j);
+                    botMoves = getKnightMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='r'){
-                    botMoves = getRookMoves(i,j);
+                    botMoves = getRookMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='q'){
-                    botMoves = getQueenMoves(i,j);
+                    botMoves = getQueenMoves(i,j,env);
                 }
                 else if(env[i][j][1]=='k'){
-                    botMoves = getKingMoves(i,j);
+                    botMoves = getKingMoves(i,j,env);
                 }
-                displayMoves(moves);
             }
             // get score for each move
             botMoves.forEach(m=>{
                 let newKillScore = killScore;
-                if(env[m[0]][m[1]][0]==botChar && env[m[0]][m[1]][1]=='k') return -100000;
                 //if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==botChar) newKillScore -= defenseWeight*pieceWts[env[m[0]][m[1]][1]];
                 let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1]);
                 let score = getMoveScore(envModified, true, depth+1, newKillScore);
+                if(depth==1 && score>1520) console.log(envModified, score);
                 //console.log(score);
                 if(score<minScore){
                     minScore = score;
@@ -741,7 +738,6 @@ function getMoveScore([...envClone], isMax, depth, killScore){
             });
             }
         }
-        //console.log(minScore);
         return minScore;
     }
 }
