@@ -2,7 +2,7 @@
 ![Javascript](https://img.shields.io/badge/Javascript-yellow?style=for-the-badge&logo=javascript&logoColor=darkyellow)
 ![HTML](https://img.shields.io/badge/HTML-lightblue?style=for-the-badge&logo=html5&logoColor=darkblue)
 ![CSS](https://img.shields.io/badge/CSS-lightgreen?style=for-the-badge&logo=css3&logoColor=darkgreen)
-![VS Code](https://img.shields.io/badge/CSS-blue?style=for-the-badge&logo=visualstudio&logoColor=darkblue)
+![VS Code](https://img.shields.io/badge/VSCode-blue?style=for-the-badge&logo=visualstudio&logoColor=darkblue)
 ![banner](https://github.com/prabhav-pandya/Chess-AI-MinMax/blob/main/Show%20Images/banner.png)
 <br>
 <div>
