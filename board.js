@@ -43,9 +43,9 @@ var pieceDict = {
 
 var pieceWts = {
     "r":60,
-    "n":30,
+    "n":40,
     "b":30,
-    "k":1000,
+    "k":10000,
     "q":200,
     "p":10
 }
@@ -63,7 +63,7 @@ var selectedPiece = ''; // store selected piece
 
 var maxDepth = 4; 
 
-var defenseWeight = 1; // defense should be given more priority or it will sacrifice to kill
+var defenseWeight = 1; 
 var attackWeight = 1;
 
 /******************************************************************/
@@ -550,7 +550,7 @@ function getKingMoves(i,j, env){
 
 function botMove(){
     let envClone = clone(env);
-    var piece, maxScore = -1000000, bestMove=[];
+    var piece, maxScore = -1000000, bestMoves=[];
     console.log("Bot score before move: ", evaluateBoard(envClone, 0));
     for(let i=0;i<8;i++){
         for(let j=0;j<8;j++){
@@ -579,25 +579,23 @@ function botMove(){
 
             // get score for each move
             botMoves.forEach(m=>{
-                if(env[m[0]][m[1]][0]==userChar && env[m[0]][m[1]][1]=='k'){
-                    piece = env[i][j];
-                    maxScore = 1000000;
-                    bestMove = m;
-                }
-                else{
-                    let newKillScore = 0;
-                    if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newKillScore += pieceWts[env[m[0]][m[1]][1]];
+                    let newnumSteps = 0;
+                    if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newnumSteps += pieceWts[env[m[0]][m[1]][1]];
                     let envModified = makeMoveInEnv([...envClone], envClone[i][j], m[0], m[1]);
-                    let score = getMoveScore(envModified, false, 1, newKillScore);
+                    let score = getMoveScore(envModified, false, 1, newnumSteps);
                     //console.log(score);
                     if(score>maxScore){
+                        bestMoves=[]
                         piece = env[i][j];
                         maxScore = score;
-                        bestMove = m;
+                        bestMoves.push([piece, m]);
                         //console.log(env[i][j]);
                         //console.log(maxScore);
                     }
-                }
+                    else if(score==maxScore){
+                        piece = env[i][j];
+                        bestMoves.push([piece, m]);
+                    }
             });
 
         }
@@ -607,7 +605,8 @@ function botMove(){
     numPossibleMoves = 0;
     //console.log(bestMove);
     //console.log(maxScore);
-    env = makeMoveInEnv(env, piece, bestMove[0], bestMove[1]);
+    var randomMove = Math.floor(Math.random() * bestMoves.length);
+    env = makeMoveInEnv(env, bestMoves[randomMove][0], bestMoves[randomMove][1][0], bestMoves[randomMove][1][1]);
     renderPositions();
     alterChance();
 }
@@ -623,7 +622,7 @@ function makeMoveInEnv([...envClone], piece, i, j){
     return envCopy;
 }
 
-function evaluateBoard(envClone, killScore){
+function evaluateBoard(envClone, numSteps){
     let score = 0;
     for(let i=0;i<8;i++){
         for(let j=0;j<8;j++){
@@ -641,16 +640,16 @@ function evaluateBoard(envClone, killScore){
         }
     }
 
-    return score;
+    return score + numSteps;
 }
 
 // uses minmax recursive algorithm to find the best option
-function getMoveScore([...envClone], isMax, depth, killScore){
+function getMoveScore([...envClone], isMax, depth, numSteps){
     numPossibleMoves++;
     let env = clone(envClone);
     if(depth==maxDepth){
         // if the king is killed or depth is reached, evaluate the board and return score.
-        let evaluationScore = evaluateBoard(env, killScore);
+        let evaluationScore = evaluateBoard(env, numSteps);
         return evaluationScore;
     }
 
@@ -683,10 +682,8 @@ function getMoveScore([...envClone], isMax, depth, killScore){
             }
             // get score for each move
             botMoves.forEach(m=>{
-                let newKillScore = killScore;
-                if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newKillScore += attackWeight * pieceWts[env[m[0]][m[1]][1]];
-                let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1], newKillScore);
-                let score = getMoveScore(envModified, false, depth+1, newKillScore);
+                let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1]);
+                let score = getMoveScore(envModified, false, depth+1, numSteps-5);
                 //console.log(score);
                 if(score>maxScore){
                     maxScore = score;
@@ -726,11 +723,8 @@ function getMoveScore([...envClone], isMax, depth, killScore){
             }
             // get score for each move
             botMoves.forEach(m=>{
-                let newKillScore = killScore;
-                //if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==botChar) newKillScore -= defenseWeight*pieceWts[env[m[0]][m[1]][1]];
                 let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1]);
-                let score = getMoveScore(envModified, true, depth+1, newKillScore);
-                if(depth==1 && score>1520) console.log(envModified, score);
+                let score = getMoveScore(envModified, true, depth+1, numSteps-5);
                 //console.log(score);
                 if(score<minScore){
                     minScore = score;
