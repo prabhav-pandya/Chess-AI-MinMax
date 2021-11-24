@@ -66,8 +66,6 @@ var maxDepth = 4;
 var defenseWeight = 1; 
 var attackWeight = 1;
 
-var moveMadeBlocks = [];
-
 /******************************************************************/
 // Create the front-end and environment
 
@@ -78,7 +76,7 @@ function renderPositions(){
     renders the front-end of the board
     function is called everytime a move is made
     */
-    //console.log(JSON.stringify(moveMadeBlocks));
+
     if(chance=='w') turn.innerHTML = "<p>Your Turn</p>";
     else turn.innerHTML = "<p>Bot's Turn</p>";
 
@@ -110,13 +108,6 @@ function renderPositions(){
             id+=1;
         }
     }
-
-    // when a move is made, blocks are highlighted...
-    moveMadeBlocks.forEach(id=>{
-        document.getElementById(`square_${id}`).style.backgroundColor = "#ffce99";
-    });
-    moveMadeBlocks = [];
-
 }
 
 /******************************************************************/
@@ -213,13 +204,11 @@ function movePiece(selectedPiece, i, j){
         for(let j=0;j<8;j++){
             if(env[i][j]==selectedPiece){
                 env[i][j] = '';
-                moveMadeBlocks.push(i*8+j);
                 break;
             } 
         }
     }
     env[i][j] = selectedPiece;
-    moveMadeBlocks.push(i*8+j);
     renderPositions();
 }
 
@@ -593,7 +582,7 @@ function botMove(){
                     let newnumSteps = 0;
                     if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newnumSteps += pieceWts[env[m[0]][m[1]][1]];
                     let envModified = makeMoveInEnv([...envClone], envClone[i][j], m[0], m[1]);
-                    let score = getMoveScore(envModified, false, 1, newnumSteps);
+                    let score = getMoveScore(envModified, false, 1, newnumSteps, maxScore, -maxScore);
                     //console.log(score);
                     if(score>maxScore){
                         bestMoves=[]
@@ -617,23 +606,19 @@ function botMove(){
     //console.log(bestMove);
     //console.log(maxScore);
     var randomMove = Math.floor(Math.random() * bestMoves.length);
-    env = makeMoveInEnv([...env], bestMoves[randomMove][0], bestMoves[randomMove][1][0], bestMoves[randomMove][1][1], true);
+    env = makeMoveInEnv(env, bestMoves[randomMove][0], bestMoves[randomMove][1][0], bestMoves[randomMove][1][1]);
     renderPositions();
     alterChance();
 }
 
-function makeMoveInEnv([...envClone], piece, i, j, final = false){
+function makeMoveInEnv([...envClone], piece, i, j){
     let envCopy = clone(envClone);
     for(let i=0;i<8;i++){
         for(let j=0;j<8;j++){
-            if(envCopy[i][j]==piece){
-                envCopy[i][j]="";
-                if(final) moveMadeBlocks.push(i*8+j);
-            } 
+            if(envCopy[i][j]==piece) envCopy[i][j]="";
         }
     }
     envCopy[i][j] = piece;
-    if(final) moveMadeBlocks.push(i*8+j);
     return envCopy;
 }
 
@@ -659,7 +644,7 @@ function evaluateBoard(envClone, numSteps){
 }
 
 // uses minmax recursive algorithm to find the best option
-function getMoveScore([...envClone], isMax, depth, numSteps){
+function getMoveScore([...envClone], isMax, depth, numSteps, alphaParent, betaParent){
     numPossibleMoves++;
     let env = clone(envClone);
     if(depth==maxDepth){
@@ -667,9 +652,9 @@ function getMoveScore([...envClone], isMax, depth, numSteps){
         let evaluationScore = evaluateBoard(env, numSteps);
         return evaluationScore;
     }
-
+    let minScore = 1000000;
+    let maxScore = -1000000;
     if(isMax){
-        let maxScore = -1000000;
         // check score for all possible next moves and store maximum
         for(let i=0;i<8;i++){
             for(let j=0;j<8;j++){
@@ -696,13 +681,13 @@ function getMoveScore([...envClone], isMax, depth, numSteps){
                 }
             }
             // get score for each move
-            botMoves.forEach(m=>{
+            botMoves.every(m=>{
                 let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1]);
-                let score = getMoveScore(envModified, false, depth+1, numSteps-5);
+                let score = getMoveScore(envModified, false, depth+1, numSteps-5, alphaParent, betaParent);
                 //console.log(score);
-                if(score>maxScore){
-                    maxScore = score;
-                }
+                maxScore = Math.max(maxScore, score);
+                alphaParent = Math.max(alphaParent, score);
+                if(alphaParent>=betaParent) return false;
             });
             }
         }
@@ -710,7 +695,6 @@ function getMoveScore([...envClone], isMax, depth, numSteps){
 
     }
     else{
-        let minScore = 1000000;
         // check score for all possible next moves and store maximum
         for(let i=0;i<8;i++){
             for(let j=0;j<8;j++){
@@ -739,11 +723,11 @@ function getMoveScore([...envClone], isMax, depth, numSteps){
             // get score for each move
             botMoves.forEach(m=>{
                 let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1]);
-                let score = getMoveScore(envModified, true, depth+1, numSteps-5);
+                let score = getMoveScore(envModified, true, depth+1, numSteps-5, alphaParent, betaParent);
                 //console.log(score);
-                if(score<minScore){
-                    minScore = score;
-                }
+                minScore = Math.min(minScore, score);
+                betaParent = Math.min(betaParent, score);
+                if(alphaParent>=betaParent) return false;
             });
             }
         }
