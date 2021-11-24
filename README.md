@@ -17,7 +17,7 @@
           <br><br>
           The minimax algorithm performs a depth-first search algorithm for the exploration of the complete game tree. The minimax algorithm proceeds all the way down to the terminal node of the tree, then backtrack the tree as the recursion.
 <br><br>
-<strong>The AI plays a bit too defensive. It can further be improved by using a better heuristic and implementing alpha-beta pruning.</strong>
+<strong>Increasing value of variable "maxDepth" improves the AI's performance but is computationally expensive.</strong>
     </p>
   </div>
 </div>
