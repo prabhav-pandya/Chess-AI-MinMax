@@ -557,6 +557,15 @@ function getKingMoves(i,j, env){
 /******************************************************************/
 
 /******************************************************************/
+// MIN MAX helper functions
+function getKillScore([...env], move){
+    if(env[move[0]][move[1]]!=''){
+        return pieceWts[env[move[0]][move[1]][1]];
+    }
+    return 0;
+}
+
+/******************************************************************/
 // MIN MAX ALGORITHM
 
 function botMove(){
@@ -590,10 +599,9 @@ function botMove(){
 
             // get score for each move
             botMoves.forEach(m=>{
-                    let newnumSteps = 0;
-                    if(env[m[0]][m[1]]!='' && env[m[0]][m[1]][0]==userChar) newnumSteps += pieceWts[env[m[0]][m[1]][1]];
                     let envModified = makeMoveInEnv([...envClone], envClone[i][j], m[0], m[1]);
-                    let score = getMoveScore(envModified, false, 1, newnumSteps);
+                    let killScore = getKillScore(env, m)*(maxDepth);
+                    let score = getMoveScore(envModified, false, 1, killScore);
                     //console.log(score);
                     if(score>maxScore){
                         bestMoves=[]
@@ -637,7 +645,7 @@ function makeMoveInEnv([...envClone], piece, i, j, final = false){
     return envCopy;
 }
 
-function evaluateBoard(envClone, numSteps){
+function evaluateBoard(envClone, killScore){
     let score = 0;
     for(let i=0;i<8;i++){
         for(let j=0;j<8;j++){
@@ -655,16 +663,16 @@ function evaluateBoard(envClone, numSteps){
         }
     }
 
-    return score + numSteps;
+    return score + killScore;
 }
 
 // uses minmax recursive algorithm to find the best option
-function getMoveScore([...envClone], isMax, depth, numSteps){
+function getMoveScore([...envClone], isMax, depth, allKillScore){
     numPossibleMoves++;
     let env = clone(envClone);
     if(depth==maxDepth){
         // if the king is killed or depth is reached, evaluate the board and return score.
-        let evaluationScore = evaluateBoard(env, numSteps);
+        let evaluationScore = evaluateBoard(env, allKillScore);
         return evaluationScore;
     }
 
@@ -698,7 +706,8 @@ function getMoveScore([...envClone], isMax, depth, numSteps){
             // get score for each move
             botMoves.forEach(m=>{
                 let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1]);
-                let score = getMoveScore(envModified, false, depth+1, numSteps-5);
+                let killScore = getKillScore(env, m)*(maxDepth - depth - 1);
+                let score = getMoveScore(envModified, false, depth+1, allKillScore + killScore);
                 //console.log(score);
                 if(score>maxScore){
                     maxScore = score;
@@ -739,7 +748,8 @@ function getMoveScore([...envClone], isMax, depth, numSteps){
             // get score for each move
             botMoves.forEach(m=>{
                 let envModified = makeMoveInEnv(env, env[i][j], m[0], m[1]);
-                let score = getMoveScore(envModified, true, depth+1, numSteps-5);
+                let killScore = getKillScore(env, m)*(maxDepth - depth);
+                let score = getMoveScore(envModified, true, depth+1, allKillScore - killScore);
                 //console.log(score);
                 if(score<minScore){
                     minScore = score;
